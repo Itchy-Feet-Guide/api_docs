@@ -1,11 +1,11 @@
 FORMAT: 1A
-HOST: https://edume-api.herokuapp.com
+HOST: https://api.edume.com
 
-# eduMe APIa
+# eduMe API
 
-###  Join the eduMe slack community
+###  Join the eduMe Slack Community
 
-If you are getting started with integrating eduMe into your product or even if
+If you are getting started with integrating seduMe into your product or even if
 you have already implemented and are looking at ways to further improve your
 integrations then join our Slack community for support, updates and best practices.
 
@@ -25,7 +25,7 @@ contact us</a>.
 # Group  Status
 ##  Health Check [/public/healthCheck]
 
-###  Get API status  [GET]
+###  Get API Status  [GET]
 
 
 **Endpoint**: <code>**GET** /public/healthCheck</code>
@@ -143,6 +143,29 @@ Create a user for a given team
             "lastName": "Cortez",
             "phone": null
         }
++ Response 400 (application/json)
+
+
+        {
+            "statusCode": 400,
+            "error": "Bad Request",
+            "message": "\"firstName\" is required",
+            "validation": {
+                "source": "payload",
+                "keys": [
+                    "firstName"
+                ]
+            }
+        }
++ Response 400 (application/json)
+
+
+        {
+            "errorCode": "email_in_use",
+            "statusCode": 400,
+            "error": "Bad Request",
+            "message": "That email is already in use."
+        }
 
 
 ##  List Users [/public/users{?activated}{?sort}{?groupId}]
@@ -248,6 +271,33 @@ List all users within a specific group who are activated and sort
                 "phone": null
             }
         ]
++ Response 400 (application/json)
+
+
+        {
+            "errorCode": "missing_group_id",
+            "statusCode": 400,
+            "error": "Bad Request",
+            "message": "groupId required when using customer-level API keys"
+        }
++ Response 403 (application/json)
+
+
+        {
+            "errorCode": "group_is_sub_group",
+            "statusCode": 403,
+            "error": "Forbidden",
+            "message": "Cannot perform operation on sub group"
+        }
++ Response 401 (application/json)
+
+
+        {
+            "errorCode": "insufficient_permissions",
+            "statusCode": 401,
+            "error": "Unauthorized",
+            "message": "You do not have permission to perform this action"
+        }
 
 
 ##  User Management [/public/users/{userId}]
@@ -332,9 +382,37 @@ Update a user details relating to a `userId`
             "password": null,
             "phone": null
         }
++ Response 400 (application/json)
 
 
-###  Delete a user  [DELETE]
+        {
+            "statusCode": 400,
+            "error": "Bad Request",
+            "message": "\"value\" contains a conflict between exclusive peers [email, phone]",
+            "validation": {
+                "source": "payload",
+                "keys": [
+                    ""
+                ]
+            }
+        }
++ Response 400 (application/json)
+
+
+        {
+            "statusCode": 400,
+            "error": "Bad Request",
+            "message": "\"value\" must contain at least one of [email, phone]",
+            "validation": {
+                "source": "payload",
+                "keys": [
+                    ""
+                ]
+            }
+        }
+
+
+###  Delete a User  [DELETE]
 
 
 **Endpoint**: <code>**DELETE** /public/users/{userId}</code>
@@ -381,6 +459,441 @@ Delete a user using the `userId`
 + Response 204 (application/json)
 
 
+
+#Group   Tags - Beta
+
+This group of endpoints is in **beta** and may change in the future. Please contact us before using them to ensure your account is set up to get value from smart teams.
+<br />
+<br />
+They allow the ability to add and update tags for users, which can then be used for the basis of smart teams.
+Currently, the only way to add tag categories is by contacting <a href = "mailto:support@edume.com?subject=Add Tag Categories&body = Message">support@edume.com</a>, and we can assist.
+<br />
+<br />
+We are actively gathering feedback on these endpoints - please let us know if you have any questions or suggestions.
+
+
+
+##  List Tags [/public/tags{?categoryId}{?includeValues}]
+
+###  List Tags - Beta [GET]
+
+**Endpoint**: <code>**PATCH** /public/tags{?categoryId}{?includeValues}</code>
+
+**Response Type**: `JSON`
+
+<br />
+<br />
+<br />
+<br />
+
+Get all tag categories that you have set up. Optionally get the existing values for each category. Optionally filter by category.
+
+**Use Cases**:
++ Find your tag category IDs and values, in order to assign them to users
+
+
+**Considerations**:
++ By default, only the category information will be returned, and not the values. This can be changed by using the query params.
++ As mentioned above, if you need to create new tag categories, please contact us at <a href = "mailto:support@edume.com?subject=Add Tag Categories&body = Message">support@edume.com</a>, and we will be happy to assist.
+
+
+**Related Endpoints**:
++ Create a User (with tags)
++ Update a User (with tags)
++ Update User Tags
+
+
+**Auth**:
++ x-api-key: `YOUR_API_KEY` (Required)
+
++ Parameters
+    + categoryId: `12` (number, optional) - The ID of the tag category to filter by.
+    + includeValues: `true` (boolean, optional) - Whether to include the values for each category.
+
++ Request (application/json)
+    + Headers
+            x-api-key: YOUR_API_KEY
+
++ Response 200 (application/json)
+
+    [
+        {
+            "categoryId": 12,
+            "name": "jobRole"
+            "values": [
+                "Retail Associate",
+                "Manager"
+            ]
+        },
+        {
+            "categoryId": 14,
+            "name": "store",
+            "values": [
+                "Store 1",
+                "Store 2"
+            ]
+        } 
+    ]
++ Response 404 (application/json)
+
+    {
+        "errorCode": "tag_type_not_found",
+        "statusCode": 404,
+        "error": "Not Found",
+        "message": "Tag type 1000335 does not exist"
+    }
+
+
+## Create User [/public/team/{groupId}/user]
+
+###  Create a User (with tags) - Beta [POST]
+
+**Endpoint**: <code>**POST** /public/team/{groupId}/user</code>
+
+**Response Type**: `JSON`
+
+<br />
+<br />
+<br />
+<br />
+
+Create a user in a group, and add tags
+
+**Use Cases**:
++ Add users to the account leveraging smart teams when getting started or onboarding a new user.
+
+
+**Considerations**:
++ Tags are required if using smart teams
++ When the user is created, they are automatically assigned to the specified group and the user will automatically be added to smart teams based on their tags
+
+
+**Related Endpoints**:
++ List tags
++ Update User (with tags)
++ Update User Tags
+
+
+**Auth**:
++ x-api-key: `YOUR_API_KEY` (Required)
+
+
++ Parameters
+    + groupId: `312` (number, required) - The ID of the group to create the user in
+
+
++ Request (application/json)
+    + Headers
+
+            x-api-key: YOUR_API_KEY
+
+
+    + Attributes
+        + firstName: `Alexander` (string, required) - The first name of the user. Minimum length: 2
+        + lastName: `Corte` (string, required) - The last name of the user. Minimum length: 2
+        + One Of
+            + email: `alex.cortez@gmail.com` (string, optional) - The email of the user. Only 1 of email or phone can be provided.
+            + phone: `13457663445` (string, optional) - The phone number of the user. Only 1 of email or phone can be provided.
+        + employeeId: `asfe2f` (string, optional) - An employee ID for the user, or other additional detail.
+        + sendInvite: `true` (boolean, optional) - Whether to send an invitation email (or SMS) to the user. Set this to false if you prefer to contact your users yourself.
+            + default: true
+        + tags: (array, fixed-type) - Tags to assign to the user
+            + (object)
+                + categoryId: `12` (number, required) - The ID of the tag category
+                + value: `Retail Associate` (string, required) - The value of the tag
+
+
++ Response 200 (application/json)
+
+        {
+            "activated": false,
+            "createdAt": "2019-01-22T16:36:47.537Z",
+            "customerId": 159,
+            "deleted": false,
+            "email": "alex.cortez@gmail.com",
+            "employeeId": "asfe2f",
+            "firstName": "Alexander",
+            "id": 91691,
+            "language": "en",
+            "lastName": "Cortez",
+            "phone": null,
+            "tags": [{
+                "categoryId": 12,
+                "value": "Retail Associate"
+            }]
+        }
+
++ Response 400 (application/json)
+
+        {
+            "statusCode": 400,
+            "error": "Bad Request",
+            "message": "\"firstName\" is required",
+            "validation": {
+                "source": "payload",
+                "keys": [
+                    "firstName"
+                ]
+            }
+        }
++ Response 400 (application/json)
+
+
+        {
+            "errorCode": "email_in_use",
+            "statusCode": 400,
+            "error": "Bad Request",
+            "message": "That email is already in use."
+        }
+
++ Response 404 (application/json)
+
+        {
+            "errorCode": "tag_type_not_found",
+            "statusCode": 404,
+            "error": "Not Found",
+            "message": "Tag type 7890 does not exist"
+        }
+
+## Update User [/public/users/{userId}]
+
+###  Update a User (with tags) - Beta [PUT]
+
+**Endpoint**: <code>**PUT** /public/users/{userId}</code>
+
+**Response Type**: `JSON`
+
+<br />
+<br />
+<br />
+<br />
+
+Update a user details relating to a `userId`, including with tags.
+
+**Use Cases**:
++ Update a users email address OR phone number, and employeeID (eId), First Name and Last Name
++ Add in employeeID (eId) when moving existing users to seamless links
++ Replace the tags within a user without having to check what they currently have
+
+
+**Considerations**:
++ A user profile can have an `email` or a `phone` number but not both.
++ To get `userId` use `List Users in a group`
++ For use when you want to rewrite ALL the tags against a user. You will need to have all the relevant tags that you want the user to have within the request, and all previous tags will be replaced.
+
+
+**Related Endpoints**:
++ Create a User
++ Delete a User
++ Get All Users
++ List Users
+
+
+**Auth**:
++ x-api-key: `YOUR_API_KEY` (Required)
+
+
++ Parameters
+    + userId: `312` (number, required) - The ID of the user to update
+
+
++ Request (application/json)
+    + Headers
+
+            x-api-key: YOUR_API_KEY
+
+
+    + Attributes
+        + firstName: `Alexander` (string, required) - The first name of the user. Minimum length: 2
+        + lastName: `Cortéz` (string, required) - The last name of the user. Minimum length: 2
+        + One Of
+            + email: `alex.cortez@gmail.com` (string, required) - The email of the user. Only 1 of email or phone can be provided.
+            + phone: `+13457663445` (string, required) - The phone number of the user. Only 1 of email or phone can be provided.
+        + employeeId: `asfe2f` (string, optional) - An employee ID for the user, or other additional detail.
+        + tags: (array, fixed-type) - Tags to assign to the user. These will completely replace any existing tags on the user. If omitted, the user's existing tags will be left unchanged.
+            + (object)
+                + categoryId: `12` (number, required) - The ID of the tag category to assign the tag to.
+                + value: `Retail Associate` (string, required) - The value of the tag to assign to the user.
+
+
+    + Body
+
+            {
+                "firstName": "Alejandro",
+                "lastName": "Cortéz",
+                "email": "alex.cortez@gmail.com",
+                "employeeId": "asfe2f",
+                "tags": [
+                    {
+                        "categoryId": 12,
+                        "value": "Retail Associate"
+                    },
+                    {
+                        "categoryId": 13,
+                        "value": "Store 1"
+                    }
+                ]
+            }
+
++ Response 200 (application/json)
+
+
+        {
+            "activated": false,
+            "createdAt": "2019-01-22T16:36:47.537Z",
+            "customerId": 159,
+            "deleted": false,
+            "email": "alex.cortez@gmail.com",
+            "employeeId": "asfe2f",
+            "firstName": "Alejandro",
+            "id": 91691,
+            "language": "en",
+            "lastName": "Cortéz",
+            "password": null,
+            "phone": null,
+            "tags": [
+                {
+                    "categoryId": 12,
+                    "value": "Retail Associate"
+                },
+                {
+                    "categoryId": 13,
+                    "value": "Store 1"
+                }
+            ]
+        }
++ Response 400 (application/json)
+
+
+        {
+            "statusCode": 400,
+            "error": "Bad Request",
+            "message": "\"value\" contains a conflict between exclusive peers [email, phone]",
+            "validation": {
+                "source": "payload",
+                "keys": [
+                    ""
+                ]
+            }
+        }
++ Response 400 (application/json)
+
+
+        {
+            "statusCode": 400,
+            "error": "Bad Request",
+            "message": "\"value\" must contain at least one of [email, phone]",
+            "validation": {
+                "source": "payload",
+                "keys": [
+                    ""
+                ]
+            }
+        }
+
+## Update User Tags [/public/users/{userId}/tags]
+
+###  Update User Tags - Beta [PATCH]
+
+
+**Endpoint**: <code>**PATCH** /public/users/{userId}/tags</code>
+
+**Response Type**: `JSON`
+
+<br />
+<br />
+<br />
+<br />
+
+Incremantally update a user's tags
+
+**Use Cases**:
++ Add a new job role to the user and remove an old one
+
+
+**Considerations**:
++ <code>tagsToAdd</code> and <code>tagsToRemove</code> are both optional, but at least one must be provided.
+
+
+**Related Endpoints**:
++ Create a User (with tags)
++ Update a User (with tags)
++ Get All Tags
+
+
+**Auth**:
++ x-api-key: `YOUR_API_KEY` (Required)
+
+
++ Parameters
+    + userId: `312` (number, required) - The ID of the user to update
+
+
++ Request (application/json)
+    + Headers
+
+            x-api-key: YOUR_API_KEY
+
+
+    + Attributes
+        + tagsToAdd: (array, fixed-type) - List of tag ids to add to the user
+            + (object)
+                + categoryId: `12` (number, required) - The ID of the tag category to assign the tag to.
+                + value: `Retail Associate` (string, required) - The value of the tag to assign to the user.
+        + tagsToRemove: (array, fixed-type) - List of tag ids to remove from the user
+            + (object)
+                + categoryId: `12` (number, required) - The ID of the tag category to assign the tag to.
+                + value: `Retail Associate` (string, required) - The value of the tag to assign to the user.
+
+
+    + Body
+
+            {
+                "tagsToAdd": [
+                    {
+                        "categoryId": 13,
+                        "value": "Store 2"
+                    },
+                    {
+                        "categoryId": 12,
+                        "value": "Manager"
+                    }
+                ],
+                "tagsToRemove": [
+                    {
+                        "categoryId": 13,
+                        "value": "Store 1"
+                    },
+                    {
+                        "categoryId": 12,
+                        "value": "Retail Associate"
+                    }
+                ]
+            }
+
++ Response 200 (application/json)
+
+
+        [
+            {
+                "categoryId": 13,
+                "value": "Store 2"
+            },
+            {
+                "categoryId": 12,
+                "value": "Manager"
+            }
+        ]
++ Response 422 (application/json)
+
+
+        {
+            "statusCode": 422,
+            "error": "Unprocessable Entity",
+            "errorCode": "tag_value_not_found",
+            "message": "Tag value 'Captain' with tagTypeId 17 does not exist"
+        }
+
 # Group  User Identifiers
 
 User Identifiers help you to link up user IDs from partner integrations and other sources and match these to users within eduMe.
@@ -403,8 +916,6 @@ reporting and more.
 <br />
 
 Get all User Identifiers for a user
-
-**Use Cases**:
 
 
 **Considerations**:
@@ -449,6 +960,15 @@ Get all User Identifiers for a user
                 "createdAt": "2022-05-14T15:28:27+0000"
             }
         ]
++ Response 403 (application/json)
+
+
+        {
+            "errorCode": "no_access_user",
+            "statusCode": 403,
+            "error": "Forbidden",
+            "message": "You do not have permission to modify this user"
+        }
 
 
 ##  Create User Identifier [/public/users/{userId}/identifiers]
@@ -466,8 +986,6 @@ Get all User Identifiers for a user
 <br />
 
 Create and attach a new User Identifier to a user
-
-**Use Cases**:
 
 
 **Considerations**:
@@ -519,14 +1037,28 @@ Create and attach a new User Identifier to a user
             "error": "Bad Request",
             "message": "Invalid identification key"
         }
++ Response 400 (application/json)
+
+
+        {
+            "statusCode": 400,
+            "error": "Bad Request",
+            "message": "\"key\" is required",
+            "validation": {
+                "source": "payload",
+                "keys": [
+                    "key"
+                ]
+            }
+        }
 
 
 ##  User Identifier Management [/public/users/{userId}/identifiers/{identifierId}]
 
-###  Update a User Identifier  [PATCH]
+###  Update a User Identifier  [PUT]
 
 
-**Endpoint**: <code>**PATCH** /public/users/{userId}/identifiers/{identifierId}</code>
+**Endpoint**: <code>**PUT** /public/users/{userId}/identifiers/{identifierId}</code>
 
 **Response Type**: `JSON`
 
@@ -536,8 +1068,6 @@ Create and attach a new User Identifier to a user
 <br />
 
 Update the value of a User Identifier
-
-**Use Cases**:
 
 
 **Considerations**:
@@ -580,6 +1110,15 @@ Update the value of a User Identifier
             "value": "updated-value",
             "createdAt": "2022-05-14T14:28:27+0000"
         }
++ Response 404 (application/json)
+
+
+        {
+            "errorCode": "user_identification_value_not_found",
+            "statusCode": 404,
+            "error": "Not Found",
+            "message": "User identification value not found"
+        }
 
 
 ###  Delete a User Identifier  [DELETE]
@@ -595,8 +1134,6 @@ Update the value of a User Identifier
 <br />
 
 Delete a User Identifier for a specific `userId`
-
-**Use Cases**:
 
 
 **Considerations**:
@@ -627,6 +1164,232 @@ Delete a User Identifier for a specific `userId`
 
 
 + Response 204
+
+
+# Group  User Teams
+##  User Teams Management [/public/users/{userId}/teams]
+
+###  Assign/Unassign User from Teams  [PATCH]
+
+
+**Endpoint**: <code>**PATCH** /public/users/{userId}/teams</code>
+
+**Response Type**: `JSON`
+
+<br />
+<br />
+<br />
+<br />
+
+Assign and unassign a user from a list of teams
+
+**Use Cases**:
++ Automate removal of a learner from specific team(s) to remove content assigned to the respective team(s) from the learners dashboard within their knowledge hub.
++ Automate addition of a learner to specific team(s) to add content assigned to the respective team to the learners dashboard within their knowledge hub.
+
+
+**Considerations**:
++ Requires `userId` not eId.
++ To get `userId`, you can use `Get All Users` with a filter on phone, email, or eId.
++ To get the team IDs, use the `List Teams` endpoint.
+
+
+**Related Endpoints**:
++ List Teams
++ Set User's Teams
+
+
+**Auth**:
++ x-api-key: `YOUR_API_KEY` (Required)
+
+
++ Parameters
+    + userId: `312` (number, required) - The ID of the user
+
+
++ Request (application/json)
+    + Headers
+
+            x-api-key: YOUR_API_KEY
+
+
+    + Attributes
+        + teamsToAdd: 20,25 (array[number], required) - List of teams IDs that user should be assigned to
+        + teamsToRemove: 21,24 (array[number], required) - List of teams IDs that user should be unassigned from
+
+
++ Response 204
++ Response 400
+
+
+        {
+            "errorCode": "group_is_parent_group",
+            "statusCode": 400,
+            "error": "Bad Request",
+            "message": "Cannot assign user 1723 to group 2"
+        }
++ Response 400 (application/json)
+
+
+        {
+            "errorCode": "user_in_different_group",
+            "statusCode": 400,
+            "error": "Bad Request",
+            "message": "Cannot assign user 1723 to group 9"
+        }
++ Response 401 (application/json)
+
+
+        {
+            "errorCode": "insufficient_permissions",
+            "statusCode": 401,
+            "error": "Unauthorized",
+            "message": "You do not have permission to perform this action"
+        }
++ Response 403 (application/json)
+
+
+        {
+            "errorCode": "no_access_user",
+            "statusCode": 403,
+            "error": "Forbidden",
+            "message": "You do not have permission to modify this user"
+        }
++ Response 404 (application/json)
+
+
+        {
+            "errorCode": "user_not_found",
+            "statusCode": 404,
+            "error": "Not Found",
+            "message": "No user with id 1"
+        }
++ Response 404 (application/json)
+
+
+        {
+            "errorCode": "groups_not_found",
+            "statusCode": 404,
+            "error": "Not Found",
+            "message": "Groups 1 do not exist"
+        }
+
+
+###  Set User's Teams  [PUT]
+
+
+**Endpoint**: <code>**PUT** /public/users/{userId}/teams</code>
+
+**Response Type**: `JSON`
+
+<br />
+<br />
+<br />
+<br />
+
+Assign a user to a list of teams and unassign them from any previous teams
+
+**Use Cases**:
++ Automate replacing all the team(s) a learner is assigned to with new team(s) to add and remove courses assigned to the respective team(s) from the learners dashboard within their knowledge hub.
+
+
+**Considerations**:
++ Requires `userId` not eId.
++ Requires a list of team IDs as the request body e.g `[34, 20, 22]`.
++ Pass an empty array to remove a user from all their previous teams.
++ To get `userId`, you can use `Get All Users` with a filter on phone, email, or eId.
++ To get the team IDs, use the `List Teams` endpoint.
+
+
+**Related Endpoints**:
++ List Teams
++ Assign/Unassign User from Teams
+
+
+**Auth**:
++ x-api-key: `YOUR_API_KEY` (Required)
+
+
++ Parameters
+    + userId: `312` (number, required) - The ID of the user
+
+
++ Request (application/json)
+    + Headers
+
+            x-api-key: YOUR_API_KEY
+
+
+    + Attributes (array, fixed-type)
+        + (number) - first team ID to assign user to
+        + (number) - second team ID to assign user to
+        + (number) - ... (etc)
+
+
+    + Body
+
+            [
+                1,
+                2,
+                3,
+                4
+            ]
+
++ Response 204
++ Response 400 (application/json)
+
+
+        {
+            "errorCode": "group_is_parent_group",
+            "statusCode": 400,
+            "error": "Bad Request",
+            "message": "Cannot assign user 1723 to group 2"
+        }
++ Response 400 (application/json)
+
+
+        {
+            "errorCode": "user_in_different_group",
+            "statusCode": 400,
+            "error": "Bad Request",
+            "message": "Cannot assign user 1723 to group 9"
+        }
++ Response 401 (application/json)
+
+
+        {
+            "errorCode": "insufficient_permissions",
+            "statusCode": 401,
+            "error": "Unauthorized",
+            "message": "You do not have permission to perform this action"
+        }
++ Response 403 (application/json)
+
+
+        {
+            "errorCode": "no_access_user",
+            "statusCode": 403,
+            "error": "Forbidden",
+            "message": "You do not have permission to modify this user"
+        }
++ Response 404 (application/json)
+
+
+        {
+            "errorCode": "user_not_found",
+            "statusCode": 404,
+            "error": "Not Found",
+            "message": "No user with id 1"
+        }
++ Response 404 (application/json)
+
+
+        {
+            "errorCode": "groups_not_found",
+            "statusCode": 404,
+            "error": "Not Found",
+            "message": "Groups 1 do not exist"
+        }
 
 
 # Group  Groups
@@ -705,10 +1468,399 @@ Delete a User Identifier for a specific `userId`
                 "parentGroupId": null
             }
         ]
++ Response 401 (application/json)
+
+
+        {
+            "errorCode": "insufficient_permissions",
+            "statusCode": 401,
+            "error": "Unauthorized",
+            "message": "You do not have permission to perform this action"
+        }
+
+
+# Group  Teams
+##  List Teams [/public/teams{?groupId}]
+
+###  List Teams  [GET]
+
+
+**Endpoint**: <code>**GET** /public/teams{?groupId}</code>
+
+**Response Type**: `JSON`
+
+<br />
+<br />
+<br />
+<br />
+
+List all teams in a group
+
+**Use Cases**:
++ Determine which teams to assign to knowledge hub links
++ Determine which teams to read / update / delete
+
+
+**Considerations**:
++ Requires `groupId`, use `Get group details with teams` to obtain `groupId`
+
+
+**Related Endpoints**:
++ Get Group Details with Teams
++ Create a Team
++ Update a Team
++ Delete a Team
+
+
+**Auth**:
++ x-api-key: `YOUR_API_KEY` (Required)
+
+
++ Parameters
+    + groupId: `98` (number, required) - Which group to list teams from. Required when using customer-level API-key.
+
+
++ Request (application/json)
+    + Headers
+
+            x-api-key: YOUR_API_KEY
+
+
++ Response 200 (application/json)
+
+
+        [
+            {
+                "id": 2934,
+                "name": "UK",
+                "createdAt": "2022-09-13T11:12:11.974Z"
+            },
+            {
+                "id": 2935,
+                "name": "France",
+                "createdAt": "2022-09-13T11:12:25.839Z"
+            },
+            {
+                "id": 2936,
+                "name": "Luxembourg",
+                "createdAt": "2022-09-13T11:12:55.137Z"
+            }
+        ]
++ Response 401 (application/json)
+
+
+        {
+            "errorCode": "insufficient_permissions",
+            "statusCode": 401,
+            "error": "Unauthorized",
+            "message": "You do not have permission to perform this action"
+        }
++ Response 403 (application/json)
+
+
+        {
+            "errorCode": "group_is_sub_group",
+            "statusCode": 403,
+            "error": "Forbidden",
+            "message": "Cannot perform operation on sub group"
+        }
++ Response 404 (application/json)
+
+
+        {
+            "errorCode": "group_not_found",
+            "statusCode": 404,
+            "error": "Not Found",
+            "message": "Group with id 98 does not exist."
+        }
+
+
+##  Create team [/public/teams{?groupId}]
+
+###  Create a Team  [POST]
+
+
+**Endpoint**: <code>**POST** /public/teams{?groupId}</code>
+
+**Response Type**: `JSON`
+
+<br />
+<br />
+<br />
+<br />
+
+Create a new team within a group
+
+**Use Cases**:
++ Automate the creation of teams to reflect your customers or own organisational structures
+
+
+**Considerations**:
++ Requires `groupId`. Use `Get group details with teams` to obtain `groupId`
++ The maximum total length of a team name is 60 characters
++ Team name should not be already in-use within the group
+
+
+**Related Endpoints**:
++ Get Group Details with Teams
++ List Teams
++ Update a Team
++ Delete a Team
+
+
+**Auth**:
++ x-api-key: `YOUR_API_KEY` (Required)
+
+
++ Parameters
+    + groupId: `98` (number, required) - Which group to list teams from. Required when using customer-level API-key.
+
+
++ Request (application/json)
+    + Headers
+
+            x-api-key: YOUR_API_KEY
+
+
+    + Attributes
+        + name: `Ecuador` (string, required) - The name of the team.
+
+
++ Response 200 (application/json)
+
+
+        {
+            "id": 2946,
+            "name": "Ecuador",
+            "createdAt": "2022-09-13T11:12:55.137Z"
+        }
++ Response 400 (application/json)
+
+
+        {
+            "errorCode": "group_name_too_long",
+            "statusCode": 400,
+            "error": "Bad Request",
+            "message": "Group name should be no longer than 60 characters."
+        }
++ Response 400 (application/json)
+
+
+        {
+            "errorCode": "child_group_name_already_exists",
+            "statusCode": 400,
+            "error": "Bad Request",
+            "message": "Team name \"Ecuador\" already exists in this group. Try another name."
+        }
++ Response 401 (application/json)
+
+
+        {
+            "errorCode": "insufficient_permissions",
+            "statusCode": 401,
+            "error": "Unauthorized",
+            "message": "You do not have permission to perform this action"
+        }
++ Response 403 (application/json)
+
+
+        {
+            "errorCode": "group_is_sub_group",
+            "statusCode": 403,
+            "error": "Forbidden",
+            "message": "Cannot perform operation on sub group"
+        }
++ Response 404 (application/json)
+
+
+        {
+            "errorCode": "group_not_found",
+            "statusCode": 404,
+            "error": "Not Found",
+            "message": "Group with id 98 does not exist."
+        }
+
+
+##  Team Management [/public/teams/{teamId}]
+
+###  Update a Team  [PUT]
+
+
+**Endpoint**: <code>**PUT** /public/teams/{teamId}</code>
+
+**Response Type**: `JSON`
+
+<br />
+<br />
+<br />
+<br />
+
+Update details of a specific team
+
+**Use Cases**:
++ Automate the creation of teams to reflect your customers or own organisational structures
+
+
+**Considerations**:
++ The maximum total length of a team name is 60 characters
++ Team name should not be already in-use within the group
+
+
+**Related Endpoints**:
++ List Teams
++ Create a Team
++ Delete a Team
+
+
+**Auth**:
++ x-api-key: `YOUR_API_KEY` (Required)
+
+
++ Parameters
+    + teamId: `2946` (number, required) - The ID of the team
+
+
++ Request (application/json)
+    + Headers
+
+            x-api-key: YOUR_API_KEY
+
+
+    + Attributes
+        + name: `Ecuador` (string, required) - The name of the team.
+
+
++ Response 200 (application/json)
+
+
+        {
+            "id": 2946,
+            "name": "Ecuador",
+            "createdAt": "2022-09-13T11:12:55.137Z"
+        }
++ Response 400 (application/json)
+
+
+        {
+            "errorCode": "group_name_too_long",
+            "statusCode": 400,
+            "error": "Bad Request",
+            "message": "Group name should be no longer than 60 characters."
+        }
++ Response 400 (application/json)
+
+
+        {
+            "errorCode": "child_group_name_already_exists",
+            "statusCode": 400,
+            "error": "Bad Request",
+            "message": "Team name \"Ecuador\" already exists in this group. Try another name."
+        }
++ Response 401 (application/json)
+
+
+        {
+            "errorCode": "insufficient_permissions",
+            "statusCode": 401,
+            "error": "Unauthorized",
+            "message": "You do not have permission to perform this action"
+        }
++ Response 403 (application/json)
+
+
+        {
+            "errorCode": "group_is_parent_group",
+            "statusCode": 403,
+            "error": "Forbidden",
+            "message": "Cannot perform operation on parent group"
+        }
++ Response 404 (application/json)
+
+
+        {
+            "errorCode": "group_not_found",
+            "statusCode": 404,
+            "error": "Not Found",
+            "message": "Group with id 98 does not exist."
+        }
+
+
+##  Team management [/public/teams/{teamId}]
+
+###  Delete a Team  [DELETE]
+
+
+**Endpoint**: <code>**DELETE** /public/teams/{teamId}</code>
+
+**Response Type**: `No Response`
+
+<br />
+<br />
+<br />
+<br />
+
+Delete a specific team
+
+**Use Cases**:
++ Automate deletion of teams to reflect partner organisational structures / reflect removal of teams.
+
+
+**Considerations**:
++ Ensure team data is no longer required.
+
+
+**Related Endpoints**:
++ List Teams
++ Create a Team
++ Update a Team
+
+
+**Auth**:
++ x-api-key: `YOUR_API_KEY` (Required)
+
+
++ Parameters
+    + teamId: `98` (number, required) - The ID of the team
+
+
++ Request (application/json)
+    + Headers
+
+            x-api-key: YOUR_API_KEY
+
+
++ Response 204
++ Response 401 (application/json)
+
+
+        {
+            "errorCode": "insufficient_permissions",
+            "statusCode": 401,
+            "error": "Unauthorized",
+            "message": "You do not have permission to perform this action"
+        }
++ Response 403 (application/json)
+
+
+        {
+            "errorCode": "group_is_parent_group",
+            "statusCode": 403,
+            "error": "Forbidden",
+            "message": "Cannot perform operation on parent group"
+        }
++ Response 404 (application/json)
+
+
+        {
+            "errorCode": "group_not_found",
+            "statusCode": 404,
+            "error": "Not Found",
+            "message": "Group with id 98 does not exist."
+        }
 
 
 # Group  Courses
-##  List courses [/public/courses{?groupId}]
+##  List Courses [/public/courses{?groupId}]
 
 ###  List Course  [GET]
 
@@ -754,51 +1906,125 @@ Lists course details with modules, lessons, and teams assigned
 + Response 200 (application/json)
 
 
+        [
+            {
+                "id": 4503,
+                "customerId": 5,
+                "courseKey": "cool_company_and_edume9209",
+                "public": true,
+                "icon": "mortarboard",
+                "createdAt": "2018-03-29T11:10:40.361Z",
+                "updatedAt": "2018-03-29T12:48:58.154Z",
+                "colour": "#de8f6e",
+                "published": true,
+                "type": "ongoing",
+                "requiresEnrolment": false,
+                "isSample": false,
+                "learnersCount": null,
+                "defaultLanguage": "en",
+                "titleCkey": "course.title_ktb4io8v.1gu",
+                "courseImageUrlCkey": "course.image.url_ktb4io8v.pb9",
+                "completionMessageCkey": null,
+                "completionButtonUrlCkey": null,
+                "completionButtonTextCkey": null,
+                "completionTitleCkey": null,
+                "completionSubtitleCkey": null,
+                "completionShowDashboardLink": false,
+                "hideTitleSlide": false,
+                "isFountainOnly": false,
+                "googleSheetsId": null,
+                "deleted": false,
+                "lastGsheetImportDate": null,
+                "lastGsheetExportDate": null,
+                "completionIosUrlCkey": null,
+                "completionOtherOsUrlCkey": null,
+                "completionThemeColour": "#0D003A",
+                "completionTextColour": "#FFFFFF",
+                "completionImageUrl": "https://edume-res.cloudinary.com/image/upload/v1656940547/img_completion_trophy_jiafmg.svg",
+                "completionCustomTextOptions": false,
+                "completionButtonDarkTheme": false,
+                "priority": null,
+                "publishedAt": null,
+                "modules": [
+                    {
+                        "id": 4869,
+                        "learningUnitKey": "cool_company_and_edume9209",
+                        "createdAt": "2018-03-29T11:10:40.369Z",
+                        "updatedAt": "2018-03-29T11:10:40.369Z",
+                        "courseId": 4503,
+                        "titleCkey": "module.title_ktb4j7k0.2ch",
+                        "title": "Cool Company and EduMe"
+                    }
+                ],
+                "teams": [
+                    {
+                        "id": 290,
+                        "name": "Jacob testing",
+                        "parentGroupId": 85
+                    },
+                    {
+                        "id": 297,
+                        "name": "iOS demos",
+                        "parentGroupId": 85
+                    },
+                    {
+                        "id": 104,
+                        "name": "EduMe Demo",
+                        "parentGroupId": 85
+                    }
+                ],
+                "title": "Cool Company and EduMe",
+                "courseImageUrl": "https://edume-res.cloudinary.com/image/upload/v1522321721/deathstar_uploads_staging/s37yed7jgngsnxlr5xw5.png",
+                "completionMessage": null,
+                "completionButtonUrl": null,
+                "completionButtonText": null,
+                "completionTitle": null,
+                "completionSubtitle": null,
+                "completionIosUrl": null,
+                "completionOtherOsUrl": null,
+                "courseActivities": [
+                    {
+                        "moduleId": 4869,
+                        "lessonId": 14973,
+                        "surveyId": null,
+                        "position": 1
+                    }
+                ],
+                "numModuleActivities": 1,
+                "learningCards": [],
+                "isMultiLanguage": false,
+                "languages": [
+                    "en"
+                ],
+                "integrations": [],
+                "lessonKeys": [
+                    "cool_company_and_edume_case_study6072"
+                ],
+                "ready": true,
+                "lessonsType": "conversational"
+            }
+        ]
++ Response 400 (application/json)
+
+
         {
-            "colour": "#de8f6e",
-            "completionButtonText": null,
-            "completionButtonUrl": null,
-            "completionMessage": null,
-            "courseImageUrl": "https://edume-res.cloudinary.com/image/upload/v1522321721/deathstar_uploads_staging/s37yed7jgngsnxlr5xw5.png",
-            "courseKey": "cool_company_and_edume_418_2988",
-            "createdAt": "2019-01-21T19:24:28.916Z",
-            "customerId": 418,
-            "iconUrl": null,
-            "id": 6191,
-            "isSample": true,
-            "learnersCount": 54,
-            "lessonKeys": [
-                "meet_chelsea_porter_418_1969"
-            ],
-            "modules": [
-                {
-                    "courseId": 6191,
-                    "createdAt": "2019-01-21T19:24:28.924Z",
-                    "id": 6557,
-                    "learningUnitKey": "cool_company_and_edume_418_2988",
-                    "title": "Cool Company and eduMe",
-                    "updatedAt": "2019-01-21T19:24:28.924Z"
-                }
-            ],
-            "numModuleActivities": 1,
-            "public": false,
-            "published": true,
-            "ready": true,
-            "requiresEnrolment": false,
-            "teams": [
-                {
-                    "id": 2072,
-                    "name": "Trial Team",
-                    "parentGroupId": 2071
-                }
-            ],
-            "title": "Cool Company and eduMe",
-            "type": "ongoing",
-            "updatedAt": "2019-01-21T19:24:28.916Z"
+            "errorCode": "missing_group_id",
+            "statusCode": 400,
+            "error": "Bad Request",
+            "message": "groupId required when using customer-level API keys"
+        }
++ Response 401 (application/json)
+
+
+        {
+            "errorCode": "insufficient_permissions",
+            "statusCode": 401,
+            "error": "Unauthorized",
+            "message": "You do not have permission to perform this action"
         }
 
 
-##  Assign retakes [/public/course/{courseId}/retake{?groupId}]
+##  Assign Retakes [/public/course/{courseId}/retake{?groupId}]
 
 ###  Assign Course Retakes  [POST]
 
@@ -911,19 +2137,462 @@ Returns a `success` status for every user included in the request. The possible 
                 }
             ]
         }
++ Response 400 (application/json)
+
+
+        {
+            "errorCode": "course_not_assigned_to_group",
+            "statusCode": 400,
+            "error": "Bad Request",
+            "message": "This course is not assigned to this group"
+        }
+
+
+# Group  Seamless Links
+##  Get a Course Link [/public/getCourseLink{?courseId}{?teamId}]
+
+###  Get a Course Seamless Link  [GET]
+
+
+**Endpoint**: <code>**GET** /public/getCourseLink{?courseId}{?teamId}</code>
+
+**Response Type**: `text/html`
+
+<br />
+<br />
+<br />
+<br />
+
+Gets a course seamless link
+
+**Use Cases**:
++ Create a mandatory training flow for a specific course (requires webhooks)
++ Create a seamless link for triggered content
+
+
+**Considerations**:
++ You can choose whether to pass in an external user ID or user identifiers, but not both. Contact eduMe support at support@edume.com to get a list of available user identifiers, or to add a new one.
++ To use user identifiers, you can pass key-value pairs as query parameters instead of an external user ID. For example, you could pass fountain.email=email@test.com, instead of externalUserId=1111.
++ If your user identifiers have special characters, for example '+', you must URL encode them in the request. For example, '+' should become '%2B'.
+
+
+**Related Endpoints**:
++ Get Course List
++ Get Groups with Teams
++ List User Identifiers
+
+
+**Auth**:
++ x-api-key: `YOUR_API_KEY` (Required)
+
+
++ Parameters
+    + courseId: `1001` (number, required) - The ID of the course you want the user to access.
+    + teamId: `876` (number, required) - The ID of the team that the course is assigned to.
+    + externalUserId: `102` (string, optional) - The external user ID of the user you want to access the course. You must either pass this, or at least one user identifier (see 'Considerations' section).
+    + completionUrl: `https://edume.com` (string, optional) - Location to redirect user after completing a course
+    + exitUrl: `https://edume.com` (string, optional) - Location to redirect user after exiting a course
+    + awaitWebhookReceipts: `true` (boolean, optional) - Require learners to wait on the course completion screen while the "learner.completed.course" webhook is sent to keep progress in sync with your systems.
+
+
++ Request (application/json)
+    + Headers
+
+            x-api-key: YOUR_API_KEY
+
+
++ Response 200 (text/html)
+
+
+        http://learn.edume.com/e/c/1001?g=876&e=102&sig=eab8e0a1aa0815139a2a33990647ab10da45104dc384409081fa4b1ce0729c84&amLoginType=seamless-custom
+
+
+##  Get a Module Link [/public/getModuleLink{?moduleId}{?teamId}]
+
+###  Get a Module Seamless Link  [GET]
+
+
+**Endpoint**: <code>**GET** /public/getModuleLink{?moduleId}{?teamId}</code>
+
+**Response Type**: `text/html`
+
+<br />
+<br />
+<br />
+<br />
+
+Gets a module seamless link
+
+**Use Cases**:
++ Create a mandatory training flow for a specific module (requires webhooks)
++ Create a seamless link for triggered content
+
+
+**Considerations**:
++ Module links will only link to the specified module, and will not link to subsequent modules in the course.
++ You can choose whether to pass in an external user ID or user identifiers, but not both. Contact eduMe support at support@edume.com to get a list of available user identifiers, or to add a new one.
++ To use user identifiers, you can pass key-value pairs as query parameters instead of an external user ID. For example, you could pass fountain.email=email@test.com, instead of externalUserId=1111.
++ If your user identifiers have special characters, for example '+', you must URL encode them in the request. For example, '+' should become '%2B'.
+
+
+**Related Endpoints**:
++ Get Course List
++ Get Groups with Teams
++ List User Identifiers
+
+
+**Auth**:
++ x-api-key: `YOUR_API_KEY` (Required)
+
+
++ Parameters
+    + moduleId: `1001` (number, required) - The ID of the module you want the user to access.
+    + teamId: `876` (number, required) - The ID of the team that the module is assigned to.
+    + externalUserId: `102` (string, optional) - The external user ID of the user you want to access the module. You must either pass this, or at least one user identifier (see 'Considerations' section).
+    + completionUrl: `https://edume.com` (string, optional) - Location to redirect user after completing a course
+    + exitUrl: `https://edume.com` (string, optional) - Location to redirect user after exiting a course
+    + awaitWebhookReceipts: `true` (boolean, optional) - Require learners to wait on the course completion screen while the "learner.completed.course" webhook is sent to keep progress in sync with your systems.
+
+
++ Request (application/json)
+    + Headers
+
+            x-api-key: YOUR_API_KEY
+
+
++ Response 200 (text/html)
+
+
+        http://learn.edume.com/e/m/1001?g=876&e=102&sig=eab8e0a1aa0815139a2a33990647ab10da45104dc384409081fa4b1ce0729c84&amLoginType=seamless-custom
+
+
+##  Get a Lesson Link [/public/getLessonLink{?lessonId}{?teamId}]
+
+###  Get a Lesson Seamless Link  [GET]
+
+
+**Endpoint**: <code>**GET** /public/getLessonLink{?lessonId}{?teamId}</code>
+
+**Response Type**: `text/html`
+
+<br />
+<br />
+<br />
+<br />
+
+Gets a lesson seamless link
+
+**Use Cases**:
++ Create a mandatory training flow for a specific lesson (requires webhooks)
++ Create a seamless link for triggered content
+
+
+**Considerations**:
++ Lesson links will link to the specified lesson, and then give access to subsequent lessons in the module.
++ You can choose whether to pass in an external user ID or user identifiers, but not both. Contact eduMe support at support@edume.com to get a list of available user identifiers, or to add a new one.
++ To use user identifiers, you can pass key-value pairs as query parameters instead of an external user ID. For example, you could pass fountain.email=email@test.com, instead of externalUserId=1111.
++ If your user identifiers have special characters, for example '+', you must URL encode them in the request. For example, '+' should become '%2B'.
+
+
+**Related Endpoints**:
++ Get Course List
++ Get Groups with Teams
++ List User Identifiers
+
+
+**Auth**:
++ x-api-key: `YOUR_API_KEY` (Required)
+
+
++ Parameters
+    + lessonId: `1001` (number, required) - The ID of the lesson you want the user to access.
+    + teamId: `876` (number, required) - The ID of the team that the lesson is assigned to.
+    + externalUserId: `102` (string, optional) - The external user ID of the user you want to access the lesson. You must either pass this, or at least one user identifier (see 'Considerations' section).
+    + completionUrl: `https://edume.com` (string, optional) - Location to redirect user after completing a course
+    + exitUrl: `https://edume.com` (string, optional) - Location to redirect user after exiting a course
+    + awaitWebhookReceipts: `true` (boolean, optional) - Require learners to wait on the course completion screen while the "learner.completed.course" webhook is sent to keep progress in sync with your systems.
+
+
++ Request (application/json)
+    + Headers
+
+            x-api-key: YOUR_API_KEY
+
+
++ Response 200 (text/html)
+
+
+        http://learn.edume.com/e/l/1001?g=876&e=102&sig=eab8e0a1aa0815139a2a33990647ab10da45104dc384409081fa4b1ce0729c84&amLoginType=seamless-custom
+
+
+##  Get a Knowledge Hub Link [/public/getKnowledgeHubLink{?knowledgeHubId}{?teamIds}]
+
+###  Get a Knowledge Hub Seamless Link  [GET]
+
+
+**Endpoint**: <code>**GET** /public/getKnowledgeHubLink{?knowledgeHubId}{?teamIds}</code>
+
+**Response Type**: `text/html`
+
+<br />
+<br />
+<br />
+<br />
+
+Gets a Knowledge Hub seamless link
+
+**Use Cases**:
++ Create a learning Knowledge Hub within your app that shows learners the current content assigned to them
+
+
+**Considerations**:
++ You can choose whether to pass in an external user ID or user identifiers, but not both. Contact eduMe support at support@edume.com to get a list of available user identifiers, or to add a new one.
++ To use user identifiers, you can pass key-value pairs as query parameters instead of an external user ID. For example, you could pass fountain.email=email@test.com, instead of externalUserId=1111.
++ If your user identifiers have special characters, for example '+', you must URL encode them in the request. For example, '+' should become '%2B'.
+
+
+**Related Endpoints**:
++ Get Groups with Teams
++ List User Identifiers
+
+
+**Auth**:
++ x-api-key: `YOUR_API_KEY` (Required)
+
+
++ Parameters
+    + knowledgeHubId: `1001` (number, required) - The ID of the Knowledge Hub you want the user to access.
+    + teamIds: `876`,`54`,`12` (array[string], required) - The ID of the team that the Knowledge Hub is for. Provide a comma separated list to use more than one value.
+    + externalUserId: `102` (string, optional) - The external user ID of the user you want to access the Knowledge Hub. You must either pass this, or at least one user identifier (see 'Considerations' section).
+
+
++ Request (application/json)
+    + Headers
+
+            x-api-key: YOUR_API_KEY
+
+
++ Response 200 (text/html)
+
+
+        http://learn.edume.com/e/kh/1001?g=876,54,12&e=102&sig=eab8e0a1aa0815139a2a33990647ab10da45104dc384409081fa4b1ce0729c84&amLoginType=seamless-custom
+
+
+##  Get a Dashboard Link [/public/getDashboardLink{?teamId}]
+
+###  Get a Dashboard Seamless Link  [GET]
+
+
+**Endpoint**: <code>**GET** /public/getDashboardLink{?teamId}</code>
+
+**Response Type**: `text/html`
+
+<br />
+<br />
+<br />
+<br />
+
+Gets a dashboard seamless link
+
+**Use Cases**:
++ Create a learning dashboard within your app that shows learners the current content assigned to them
+
+
+**Considerations**:
++ You can choose whether to pass in an external user ID or user identifiers, but not both. Contact eduMe support at support@edume.com to get a list of available user identifiers, or to add a new one.
++ To use user identifiers, you can pass key-value pairs as query parameters instead of an external user ID. For example, you could pass fountain.email=email@test.com, instead of externalUserId=1111.
++ If your user identifiers have special characters, for example '+', you must URL encode them in the request. For example, '+' should become '%2B'.
+
+
+**Related Endpoints**:
++ Get Groups with Teams
++ List User Identifiers
+
+
+**Auth**:
++ x-api-key: `YOUR_API_KEY` (Required)
+
+
++ Parameters
+    + teamId: `876` (string, required) - The ID of the team that the dashboard is for. Provide a comma separated list to use more than one value.
+    + externalUserId: `102` (string, optional) - The external user ID of the user you want to access the dashboard. You must either pass this, or at least one user identifier (see 'Considerations' section).
+
+
++ Request (application/json)
+    + Headers
+
+            x-api-key: YOUR_API_KEY
+
+
++ Response 200 (text/html)
+
+
+        http://learn.edume.com/e/d?g=876&e=102&sig=eab8e0a1aa0815139a2a33990647ab10da45104dc384409081fa4b1ce0729c84&amLoginType=seamless-custom
+
+
+##  Get a Survey Link [/public/getSurveyLink{?surveyId}{?groupId}]
+
+###  Get a Survey Seamless Link  [GET]
+
+
+**Endpoint**: <code>**GET** /public/getSurveyLink{?surveyId}{?groupId}</code>
+
+**Response Type**: `text/html`
+
+<br />
+<br />
+<br />
+<br />
+
+Gets a survey seamless link
+
+**Use Cases**:
++ Create a seamless link to a survey for your learners
+
+
+**Considerations**:
++ You can only generate seamless links to Net Promoter Score surveys
++ You can choose whether to pass in an external user ID or user identifiers, but not both. Contact eduMe support at support@edume.com to get a list of available user identifiers, or to add a new one.
++ To use user identifiers, you can pass key-value pairs as query parameters instead of an external user ID. For example, you could pass fountain.email=email@test.com, instead of externalUserId=1111.
++ If your user identifiers have special characters, for example '+', you must URL encode them in the request. For example, '+' should become '%2B'.
++ To get survey IDs for use with this endpoint, please get in contact and we'll be happy to assist.
+
+
+**Related Endpoints**:
++ Get Groups with Teams
++ List User Identifiers
+
+
+**Auth**:
++ x-api-key: `YOUR_API_KEY` (Required)
+
+
++ Parameters
+    + surveyId: `1001` (number, required) - The ID of the survey you want the user to access.
+    + groupId: `876` (number, required) - The ID of the group that the survey is assigned to.
+    + externalUserId: `102` (string, optional) - The external user ID of the user you want to access the survey. You must either pass this, or at least one user identifier (see 'Considerations' section).
+
+
++ Request (application/json)
+    + Headers
+
+            x-api-key: YOUR_API_KEY
+
+
++ Response 200 (text/html)
+
+
+        http://learn.edume.com/e/s/1001?g=876&e=102&sig=eab8e0a1aa0815139a2a33990647ab10da45104dc384409081fa4b1ce0729c84&amLoginType=seamless-custom
 
 
 # Group  Stats
-##  Progress Stats [/v2/public/stats/course/{courseId}{?dayRange}{?isoDate}{?includeTime}{?startDateTimeInMs}{?endDateTimeInMs}{?groupId}{?showLatestCompletion}]
+##  Progress Stats V3 [/v3/public/stats/course/{courseId}{?isoDate}{?includeTime}{?from}{?to}{?groupId}{?showLatestCompletion}{?showIdentifiers}]
 
 ###  Progress CSV for Course  [GET]
 
 
-        <a name="progress-stats"></a>
-This endpoint is now the **primary** endpoint, beginning 06/10/2022.
-> `CourseKey` has been replaced by `courseId` which is backwards compatible (accepts both string and number).\
-> You can still use `courseKey` (i.e. passing a string), however we encourage to start using `courseId`, as `courseKey` will go on maintanance starting January 2023.\
-> For previous version, please refer to `Progress Stats v1` which is now **deprecated**. [Click here](#progress-stats-deprecated) for details.
+**Endpoint**: <code>**GET** /v3/public/stats/course/{courseId}{?isoDate}{?includeTime}{?from}{?to}{?groupId}{?showLatestCompletion}{?showIdentifiers}</code>
+
+**Response Type**: `CSV`
+
+<br />
+<br />
+<br />
+<br />
+
+Returns a CSV file of the progress of users in the group in a course, over a range of days.
+Note that the `Course Id` is a mandatory requirement for this endpoint.
+The CSV will have the following columns, for each user in the group or team:
+
+| Column Heading                    | Description                                                                          | Notes |
+|-----------------------------------|--------------------------------------------------------------------------------------|-------|
+| **First Name**                    | First name of the user                                                               |       |
+| **Last Name**                     | Last name of the user                                                                |       |
+| **Email**                         | Email address of the user                                                            |       |
+| **Phone**                         | Phone number of the user                                                             |       |
+| **User info**                     | An id or reference number associated with the user                                   |       |
+| **Identifiers**                   | A list of external ids constructed from colon-separated key-value pairs              | Included if `showIdentifiers=true` |
+| **User Activation Date**          | The date the user activated their account                                            |       |
+| **Teams**                         | A comma-separated list of teams the user is assigned to                              |       |
+| **Course Status**                 | The user's status on the course. One of _Not started_, _In progress_ or _Completed_  |       |
+| **Course Start Date**             | The date the user started the course                                                 |       |
+| **Course Completion Date**        | The date the user completed all activities in the course                             |       |
+| **Completion Language**           | The language in which the course was completed                                       | Included if MLS feature is enabled |
+| **Latest Course Completion Date** | The most recent date the user completed the course                                   | Included if `showLatestCompletion=true`     |
+| **Lesson ... Score**              | The user's score in each lesson     |  Each lesson will be contained in its own column       |
+| **Overall Score**                 | The user's overall score for the course, calculated as the average of every lesson   | This is only present if the user has completed the whole course  |
+
+
+**Use Cases**:
++ Show user completions within a course
++ Use with course completion webhook to ensure no user blocking flows within an advanced integration
+
+
+**Considerations**:
++ When using specific start and end dates, `from` and `to`, you should use Unix timestamp in seconds or milliseconds, or ISO 8601.
++ To request data for a date range, `from` accepts the magic keywords _lastXDays_, _lastXWeeks_, _lastXMonths_ and _lastXYears_, for the last X number of days, weeks, months and years respectively.
++ To specify the current date (i.e. the date of the request) `to` accepts the magic keyword _now_ in UTC. Please use ISO 8601 format if you want to specify a timezone.
++ ISO 8601 output takes the format of YYYY-MM-ddTHH:mm:ss+0000 (if `isoDate` and `includeTime` is true).
++ To receive 'Not Started' status, don't provide values for `from`, `to` parameters.
+
+
+**Auth**:
++ x-api-key: `YOUR_API_KEY` (Required)
+
+
++ Parameters
+    + courseId: `1000` (number, required) - The id of the course to get statistics for.
+    + isoDate: `true` (boolean, optional) - Use ISO 8601 for formatting the date, defaults to true.
+    + includeTime: `true` (boolean, optional) - Include time in the date fields, defaults to true.
+    + from: `1590707415000` (number, optional) - Unix timestamp in seconds or milliseconds, or ISO 8601  (eg 1590707415000 = Thursday, 28 May 2020 23:10:15 GMT). Filters by last lesson completion >= `from`.
+    + to: `1590708615000` (number, optional) - Unix timestamp in seconds or milliseconds, or ISO 8601  (eg 1590708615000 = Thursday, 28 May 2020 23:30:15 GMT). Filters by last lesson completion <= `to`. If not provided, no upper bound filter will be applied. Requires `from`.
+    + groupId: `98` (number, required) - Which group to get progress stats from. Required when using customer-level API-key.
+    + showLatestCompletion: `true` (boolean, optional) - Include additional column showing the most recent course completion date, defaults to true.
+    + showIdentifiers: `true` (boolean, optional) - Include additional column showing the user identifiers, defaults to true.
+
+
++ Request (application/json)
+    + Headers
+
+            x-api-key: YOUR_API_KEY
+
+
++ Response 200 (text/csv)
+
+
+        First Name,Last Name,Email,Phone,User info,Identifiers,User Activation Date,Teams,Course Status,Course Start Date,Course Completion Date,Completion Language,Latest Course Completion Date,Lesson 1 Score,Lesson 2 Score,Overall Score
+        Alexander,Cortez,alex.cortez@gmail.com,,,,2018-06-14T19:32:22+0000,"Aidan",Not started,,,,,,,
+        Maria,Rodriguez,maria.rodriguez@yahoo.com,,,,2018-06-14T19:32:22+0000,"Aidan",Not started,,,,,,,
+        John,Collins,john.collins@gmail.com,,,,2018-08-12T20:30:00+0000,"Aidan",Completed,2018-08-12T20:35:00+0000,2018-08-12T20:40:00+0000,English (en),,100%,100%,100%
+
++ Response 400 (application/json)
+
+
+        {
+            "errorCode": "missing_group_id",
+            "statusCode": 400,
+            "error": "Bad Request",
+            "message": "groupId required when using customer-level API keys"
+        }
++ Response 400 (application/json)
+
+
+        {
+            "errorCode": "course_not_assigned_to_group",
+            "statusCode": 400,
+            "error": "Bad Request",
+            "message": "This course is not assigned to this group"
+        }
+
+
+##  Progress Stats V2 [/v2/public/stats/course/{courseId}{?dayRange}{?isoDate}{?includeTime}{?startDateTimeInMs}{?endDateTimeInMs}{?groupId}{?showLatestCompletion}]
+
+###  Progress CSV for Course  [GET]
+
+
+        This endpoint is backwards compatible with `Progress Stats V1` which is now **deprecated**. [Learn more](#reference/deprecated/progress-stats-v1/progress-csv-for-course-(deprecated)).
+> `CourseKey` has been replaced by `courseId` which can accept both a string and a number.\
+> You can still use `courseKey` (i.e. passing a string), however we encourage to start using `courseId`, as `courseKey` will be deprecated on 30 Nov 2023.
 
 
 **Endpoint**: <code>**GET** /v2/public/stats/course/{courseId}{?dayRange}{?isoDate}{?includeTime}{?startDateTimeInMs}{?endDateTimeInMs}{?groupId}{?showLatestCompletion}</code>
@@ -940,36 +2609,33 @@ Note that the [`Course Id`](#contact-note) is a mandatory requirement for this e
 The CSV will have the following columns, for each user in the group or team:
 | Column Heading                    | Description                                                                          | Notes |
 |-----------------------------------|--------------------------------------------------------------------------------------|-------|
-| **First Name**                    | First name of the user.                                                              |       |
-| **Last Name**                     | Last name of the user.                                                               |       |
-| **Email**                         | Email address of the user.                                                           |       |
-| **Phone**                         | Phone number of the user.                                                            |       |
-| **User info**                     | An id or reference number associated with the user.                                  |       |
-| **Identifiers**                   | A list of external ids constructed from colon-separated key-value pairs.             | Included if `showIdentifiers=true` |
-| **User Activation Date**          | The date the user activated their account.                                           |       |
-| **Teams**                         | A comma-separated list of teams the user is assigned to.                             |       |
-| **Course Status**                 | The user's status on the course. One of _Not started_, _In progress_ or _Completed_. |       |
-| **Course Start Date**             | The date the user started the course.                                                |       |
-| **Course Completion Date**        | The date the user completed all lessons in the course.                               |       |
-| **Latest Course Completion Date** | The most recent date the user completed the course.                                  | Included if `showLatestCompletion=true`     |
-| **Lesson ... Score**              | The user's score in each lesson.    |  Each lesson will be contained in its own column.      |
-| **Overall Score**                 | The user's overall score for the course, calculated as the average of every lesson.  | This is only present if the user has completed the whole course. |
+| **First Name**                    | First name of the user                                                               |       |
+| **Last Name**                     | Last name of the user                                                                |       |
+| **Email**                         | Email address of the user                                                            |       |
+| **Phone**                         | Phone number of the user                                                             |       |
+| **User info**                     | An id or reference number associated with the user                                   |       |
+| **Identifiers**                   | A list of external ids constructed from colon-separated key-value pairs              | Included if `showIdentifiers=true` |
+| **User Activation Date**          | The date the user activated their account                                            |       |
+| **Teams**                         | A comma-separated list of teams the user is assigned to                              |       |
+| **Course Status**                 | The user's status on the course. One of _Not started_, _In progress_ or _Completed . |       |
+| **Course Start Date**             | The date the user started the course                                                 |       |
+| **Course Completion Date**        | The date the user completed all activities in the course                             |       |
+| **Completion Language**           | The language in which the course was completed                                       | Included if MLS feature is enabled |
+| **Latest Course Completion Date** | The most recent date the user completed the course                                   | Included if `showLatestCompletion=true`     |
+| **Lesson ... Score**              | The user's score in each lesson     |  Each lesson will be contained in its own column       |
+| **Overall Score**                 | The user's overall score for the course, calculated as the average of every lesson   | This is only present if the user has completed the whole course. |
 
 
 **Use Cases**:
-+ Used to show user completions within a course
-+ Can be used in conjunction with course completion Webhook to ensure no user blocking flows within an advanced integration
++ Show user completions within a course
++ Use with course completion webhook to ensure no user blocking flows within an advanced integration
 
 
 **Considerations**:
-+ When using specific start and end dates you will need to convert to unix timestamp in milliseconds
++ When using specific start and end dates, you should use Unix timestamps in milliseconds
 + ISO 8601 takes the format of YYYY-MM-ddTHH:mm:ss+0000
 + Max date range is limited to 60 consecutive days
-+ Don't provide start and end date or day ranges to receive 'Not Started' status
-
-
-**Related Endpoints**:
-+ List Course
++ To receive 'Not Started' status, don't provide values for `startDateTimeInMs`, `endDateTimeInMs`, or `dayRange`
 
 
 **Auth**:
@@ -979,7 +2645,7 @@ The CSV will have the following columns, for each user in the group or team:
 + Parameters
     + courseId: `1000` (number, required) - The id of the course to get statistics for.
     + dayRange: `30` (number, optional) - The number of days to get statistics for, starting backwards from the current date. If not provided, statistics for all time will be returned. Minimum: 1. Maximum: 60
-    + isoDate: `true` (boolean, optional) - Use iso 8601 for formatting the date, defaults to false.
+    + isoDate: `true` (boolean, optional) - Use ISO 8601 for formatting the date, defaults to false.
     + includeTime: `true` (boolean, optional) - Include time in the date fields, defaults to false.
     + startDateTimeInMs: `1590707415000` (number, optional) - Unix timestamp in milliseconds (eg 1590707415000 = Thursday, 28 May 2020 23:10:15 GMT). Filters by last lesson completion >= `startDateTimeInMs`. It should not be used together with `dayRange`.
     + endDateTimeInMs: `1590708615000` (number, optional) - Unix timestamp in milliseconds (eg 1590708615000 = Thursday, 28 May 2020 23:30:15 GMT). Filters by last lesson completion <= `endDateTimeInMs`. If not provided, no upper bound filter will be applied. It should not be used together with `dayRange`. Requires `startDateTimeInMs`.
@@ -997,14 +2663,190 @@ The CSV will have the following columns, for each user in the group or team:
 + Response 200 (text/csv)
 
 
-        First name,Last name,Email,Phone,User info,User activation date (UTC),Teams,Course status,Course start date (UTC),Course completion date (UTC),Lesson 1 score,Lesson 2 score,Overall score
+        First name,Last name,Email,Phone,User info,User activation date (UTC),Teams,Course status,Course start date (UTC),Course completion date (UTC),Completion Language,Lesson 1 score,Lesson 2 score,Overall score
         Alexander,Cortez,alex.cortez@gmail.com,,,14/06/2018,"Aidan",Not started,,,,,
         Maria,Rodriguez,maria.rodriguez@yahoo.com,,,14/06/2018,"Aidan",Not started,,,,,
+        John,Collins,john.collins@gmail.com,,,,2018-08-12T20:30:00+0000,"Aidan",Completed,2018-08-12T20:35:00+0000,2018-08-12T20:40:00+0000,English (en),,100%,100%,100%
+
++ Response 400 (application/json)
 
 
-##  User Stats [/public/stats/users{?groupId}]
+        {
+            "errorCode": "missing_group_id",
+            "statusCode": 400,
+            "error": "Bad Request",
+            "message": "groupId required when using customer-level API keys"
+        }
++ Response 400 (application/json)
+
+
+        {
+            "errorCode": "course_not_assigned_to_group",
+            "statusCode": 400,
+            "error": "Bad Request",
+            "message": "This course is not assigned to this group"
+        }
+
+
+##  User Stats V2 [/v2/public/stats/users{?groupId}]
 
 ###  Get all users  [GET]
+
+
+**Endpoint**: <code>**GET** /v2/public/stats/users{?groupId}</code>
+
+**Response Type**: `JSON`
+
+<br />
+<br />
+<br />
+<br />
+
++ Unfiltered: Return a list of all users and their status on courses & lessons.
++ Filtered: A single user can be retrieved if one of the following filters is passed additionally as a parameter `email`, `phone`, `eId` (employee ID or external ID), or `identifier` (a colon-separated key-value pair constructed from the list of identifiers each user is associated with in the response from `/public/users` and `public/stats/users` endpoints).
+
+
+**Use Cases**:
++ Unfiltered: A way to receive all user data including course completions across a group.
++ Filtered: Way to spot-check an individual user's course completions.
+
+
+**Considerations**:
++ Unfiltered: Pulls report with all users without time restrictions - `Progress CSV for Course` is recommend for larger data sets.
++ Filtered: Can only use one of the filter options at a time.
++ When using specific start and end dates, `from` and `to`, you should use Unix timestamp in seconds or milliseconds, or ISO 8601.
++ To request data for a date range, `from` accepts the magic keywords _lastXDays_, _lastXWeeks_, _lastXMonths_ and _lastXYears_, for the last X number of days, weeks, months and years respectively.
++ To specify the current date (i.e. the date of the request) `to` accepts the magic keyword _now_ in UTC. Please use ISO 8601 format if you want to specify a timezone.
++ ISO 8601 output takes the format of YYYY-MM-ddTHH:mm:ss+0000 (if `isoDate` and `includeTime` is true).
+
+
+**Related Endpoints**:
++ Progress CSV for Course
++ Get Stats for Team
+
+
+**Auth**:
++ x-api-key: `YOUR_API_KEY` (Required)
+
+
++ Parameters
+    + groupId: `98` (number, required) - Which group to get user stats from. Required when using customer-level API-key.
+    + email: `alex.cortez@gmail.com` (string, optional) - The email of the user. Only 1 of `email`, `phone`, `eId` or `identifier` can be provided.
+    + phone: `13457663445` (string, optional) - The phone number of the user with a minimum length of 9. Only 1 of `email`, `phone`, `eId` or `identifier` can be provided.
+    + from: `1590707415000` (number, optional) - Unix timestamp in seconds or milliseconds, or ISO 8601 (eg 1590707415000 = Thursday, 28 May 2020 23:10:15 GMT). Filters by last lesson & module completion >= `from`.
+    + to: `1590708615000` (number, optional) - Unix timestamp in seconds or milliseconds, or ISO 8601 (eg 1590708615000 = Thursday, 28 May 2020 23:30:15 GMT). Filters by last lesson & module completion <= `to`. If not provided, no upper bound filter will be applied. Requires `from`.
+    + eId: `asfe2f` (string, optional) - An employee ID for the user, or other additional detail. Only 1 of `email`, `phone`, `eId` or `identifier` can be provided.
+    + identifier: `external-system.email:alex.cortez@gmail.com` (string, optional) - A colon-separated key and value pair from one of the user's identifiers. Only 1 of `email`, `phone`, `eId` or `identifier` can be provided.
+
+
++ Request (application/json)
+    + Headers
+
+            x-api-key: YOUR_API_KEY
+
+
++ Response 200 (application/json)
+
+
+        {
+            "data": [
+                {
+                    "id": 19,
+                    "email": "example@edume.com",
+                    "phone": null,
+                    "firstName": "Example",
+                    "lastName": "Example",
+                    "createdAt": "2016-10-25T15:24:48.188Z",
+                    "employeeId": null,
+                    "activated": true,
+                    "identifiers": [],
+                    "group": "UK",
+                    "teams": [
+                        "edume-default"
+                    ],
+                    "courses": [],
+                    "lessons": []
+                },
+                {
+                    "id": 8443,
+                    "email": "example2@edume.com",
+                    "phone": null,
+                    "firstName": "Example",
+                    "lastName": "Example",
+                    "createdAt": "2017-02-22T16:09:01.365Z",
+                    "employeeId": null,
+                    "activated": true,
+                    "identifiers": [
+                        {
+                            "key": "xyz.email",
+                            "value": "foo@gmail.com",
+                            "createdAt": "2022-03-01T13:56:09.701Z"
+                        }
+                    ],
+                    "group": "UK",
+                    "teams": [
+                        "edume-default"
+                    ],
+                    "courses": [
+                        {
+                            "id": 4132,
+                            "title": "eduMe Demo course",
+                            "modules": [
+                                {
+                                    "id": 4492,
+                                    "title": "eduMe Demo course",
+                                    "status": "complete",
+                                    "completionDate": "2017-02-22T16:18:59.924Z"
+                                }
+                            ]
+                        }
+                    ],
+                    "lessons": [
+                        {
+                            "id": 14011,
+                            "title": "Sales Skills 101",
+                            "score": "100.00",
+                            "date": "2017-02-22T16:17:44.124Z",
+                            "lessonNumber": 1,
+                            "moduleId": 4492,
+                            "courseId": 4132
+                        },
+                        {
+                            "id": 14079,
+                            "title": "The basics of cold calling",
+                            "score": "70.00",
+                            "date": "2017-02-22T16:18:59.906Z",
+                            "lessonNumber": 2,
+                            "moduleId": 4492,
+                            "courseId": 4132
+                        }
+                    ]
+                }
+            ]
+        }
++ Response 400 (application/json)
+
+
+        {
+            "errorCode": "missing_group_id",
+            "statusCode": 400,
+            "error": "Bad Request",
+            "message": "groupId required when using customer-level API keys"
+        }
++ Response 403 (application/json)
+
+
+        {
+            "errorCode": "group_is_sub_group",
+            "statusCode": 403,
+            "error": "Forbidden",
+            "message": "Cannot perform operation on sub group"
+        }
+
+
+##  User Stats V1 [/public/stats/users{?groupId}]
+
+###  Get All Users  [GET]
 
 
 **Endpoint**: <code>**GET** /public/stats/users{?groupId}</code>
@@ -1022,7 +2864,7 @@ The CSV will have the following columns, for each user in the group or team:
 
 **Use Cases**:
 + Unfiltered: A way to receive all user data including course completions across a group
-+ Filtered: Way to spot-check an individual users course completions
++ Filtered: Way to spot-check an individual user's course completions
 
 
 **Considerations**:
@@ -1132,9 +2974,116 @@ The CSV will have the following columns, for each user in the group or team:
                 }
             ]
         }
++ Response 400 (application/json)
 
 
-##  Team Stats [/public/stats/team/{teamId}]
+        {
+            "errorCode": "missing_group_id",
+            "statusCode": 400,
+            "error": "Bad Request",
+            "message": "groupId required when using customer-level API keys"
+        }
++ Response 403 (application/json)
+
+
+        {
+            "errorCode": "group_is_sub_group",
+            "statusCode": 403,
+            "error": "Forbidden",
+            "message": "Cannot perform operation on sub group"
+        }
+
+
+##  Team Stats V2 [/v2/public/stats/team/{teamId}{?isoDate}{?includeTime}{?from}{?to}{?showLatestCompletion}{?showIdentifiers}]
+
+###  Get Stats for Team  [GET]
+
+
+**Endpoint**: <code>**GET** /v2/public/stats/team/{teamId}{?isoDate}{?includeTime}{?from}{?to}{?showLatestCompletion}{?showIdentifiers}</code>
+
+**Response Type**: `CSV`
+
+<br />
+<br />
+<br />
+<br />
+
+Returns a CSV file of user progress on courses and lessons associated with the specified team
+
+| Column Heading                    | Description                                                                          | Notes |
+|-----------------------------------|--------------------------------------------------------------------------------------|-------|
+| **Course Title**                  | Course title                                                                         |       |
+| **First Name**                    | First name of the user                                                               |       |
+| **Last Name**                     | Last name of the user                                                                |       |
+| **Email**                         | Email address of the user                                                            |       |
+| **Phone**                         | Phone number of the user                                                             |       |
+| **User Info**                     | An id or reference number associated with the user                                   |       |
+| **Identifiers**                   | A list of external ids constructed from colon-separated key-value pairs              | Included if `showIdentifiers=true` |
+| **User Activation Date**          | The date the user activated their account                                            |       |
+| **Course Status**                 | The user's status on the course. One of _Not started_, _In progress_ or _Completed_  |       |
+| **Course Start Date**             | The date the user started the course                                                 |       |
+| **Course Completion Date**        | The date the user completed all activities in the course                             |       |
+| **Lesson Score**                  | The user's score in each lesson     |  Each lesson will be contained in its own column       |
+| **Overall Score**                 | The user's overall score for the course, calculated as the average of every lesson   | This is only present if the user has completed the whole course  |
+| **Latest Course Completion Date** | The most recent date the user completed the course                                   | Included if `showLatestCompletion=true` |
+
+
+**Use Cases**:
++ To check progress of users within a team and all courses and lessons they are assigned to
+
+
+**Considerations**:
++ If you don't have `teamId` then use get group with team
++ When using specific start and end dates, `from` and `to`, you should use Unix timestamp in seconds or milliseconds, or ISO 8601.
++ To request data for a date range, `from` accepts the magic keywords _lastXDays_, _lastXWeeks_, _lastXMonths_ and _lastXYears_, for the last X number of days, weeks, months and years respectively.
++ To specify the current date (i.e. the date of the request) `to` accepts the magic keyword _now_ in UTC. Please use ISO 8601 format if you want to specify a timezone.
++ ISO 8601 output takes the format of YYYY-MM-ddTHH:mm:ss+0000 (if `isoDate` and `includeTime` is true).
++ To receive 'Not Started' status, don't provide values for `from`, `to` parameters.
+
+
+**Related Endpoints**:
++ Get Group Details with Teams
+
+
+**Auth**:
++ x-api-key: `YOUR_API_KEY` (Required)
+
+
++ Parameters
+    + teamId: `142` (number, required) - The id of the team to get statistics for.
+    + isoDate: `true` (boolean, optional) - Use ISO 8601 for formatting the date, defaults to true.
+    + includeTime: `true` (boolean, optional) - Include time in the date fields, defaults to true.
+    + from: `1590707415000` (number, optional) - Unix timestamp in seconds or milliseconds, or ISO 8601 (eg 1590707415000 = Thursday, 28 May 2020 23:10:15 GMT). Filters by last lesson completion >= `from`.
+    + to: `1590708615000` (number, optional) - Unix timestamp in seconds or milliseconds, or ISO 8601 (eg 1590708615000 = Thursday, 28 May 2020 23:30:15 GMT). Filters by last lesson completion <= `to`. If not provided, no upper bound filter will be applied. Requires `from`.
+    + showLatestCompletion: `true` (boolean, optional) - Include additional column showing the most recent course completion date, defaults to true.
+    + showIdentifiers: `true` (boolean, optional) - Include additional column showing the user identifiers, defaults to true.
+
+
++ Request (application/json)
+    + Headers
+
+            x-api-key: YOUR_API_KEY
+
+
++ Response 200 (text/csv)
+
+
+        Course Title,First name,Last name,Email,Phone,User info,Identifiers,User activation date (UTC),Course status,Course start date (UTC),Course completion date (UTC),Latest course retake completion date (UTC),Lesson 1 score,Overall score
+        eduMe Demo course,Alexander,Cortez,alex.cortez@gmail.com,,,,2020-02-07T17:30:00+0000,Completed,2020-02-11T12:00:00+0000,2020-02-11T13:00:00+0000,,100%,100%
+        eduMe Demo course,Maria,Rodriguez,maria.rodriguez@yahoo.com,,,2020-05-15T12:45:00+0000,Not started,,,,,
+
++ Response 403 (application/json)
+
+
+        {
+            "errorCode": "group_is_parent_group",
+            "statusCode": 403,
+            "error": "Forbidden",
+            "message": "Cannot perform operation on parent group"
+        }
+
+
+##  Team Stats V1 [/public/stats/team/{teamId}]
 
 ###  Get Stats for Team  [GET]
 
@@ -1152,20 +3101,20 @@ Returns a CSV file of user progress on courses and lessons associated with the s
 
 | Column Heading                    | Description                                                                          | Notes |
 |-----------------------------------|--------------------------------------------------------------------------------------|-------|
-| **Course Title**                  | Course Title                                                                         |       |
-| **First Name**                    | First name of the user.                                                              |       |
+| **Course Title**                  | Course title                                                                         |       |
+| **First Name**                    | First name of the user                                                               |       |
 | **Last Name**                     | Last name of the user                                                                |       |
-| **Email**                         | Email address of the user.                                                           |       |
-| **Phone**                         | Phone number of the user.                                                            |       |
-| **User Info**                     | An id or reference number associated with the user.                                  |       |
-| **Identifiers**                   | A list of external ids constructed from colon-separated key-value pairs.             | Included if `showIdentifiers=true` |
-| **User Activation Date**          | The date the user activated their account.                                           |       |
-| **Course Status**                 | The user's status on the course. One of _Not started_, _In progress_ or _Completed_. |       |
-| **Course Start Date**             | The date the user started the course.                                                |       |
-| **Course Completion Date**        | The date the user completed all lessons in the course.                               |       |
-| **Lesson Score**                  | The user's score in each lesson.    |  Each lesson will be contained in its own column.      |
-| **Overall Score**                 | The user's overall score for the course, calculated as the average of every lesson.  | This is only present if the user has completed the whole course. |
-| **Latest Course Completion Date** | The most recent date the user completed the course.                                  | Included if `showLatestCompletion=true` |
+| **Email**                         | Email address of the user                                                            |       |
+| **Phone**                         | Phone number of the user                                                             |       |
+| **User Info**                     | An id or reference number associated with the user                                   |       |
+| **Identifiers**                   | A list of external ids constructed from colon-separated key-value pairs              | Included if `showIdentifiers=true` |
+| **User Activation Date**          | The date the user activated their account                                            |       |
+| **Course Status**                 | The user's status on the course. One of _Not started_, _In progress_ or _Completed_  |       |
+| **Course Start Date**             | The date the user started the course                                                 |       |
+| **Course Completion Date**        | The date the user completed all activities in the course                             |       |
+| **Lesson Score**                  | The user's score in each lesson     |  Each lesson will be contained in its own column       |
+| **Overall Score**                 | The user's overall score for the course, calculated as the average of every lesson   | This is only present if the user has completed the whole course  |
+| **Latest Course Completion Date** | The most recent date the user completed the course                                   | Included if `showLatestCompletion=true` |
 
 
 **Use Cases**:
@@ -1203,66 +3152,26 @@ Returns a CSV file of user progress on courses and lessons associated with the s
         eduMe Demo course,Alexander,Cortez,alex.cortez@gmail.com,,,07/02/2020,Completed,11/02/2020,11/02/2020,100%,100%
         eduMe Demo course,Maria,Rodriguez,maria.rodriguez@yahoo.com,,,15/05/2020,Not started,,,,
 
-
-# Group  Links
-##  Course Links [/user/{userId}/course/{courseId}/courseLink]
-
-###  Generate a Course Link for a User  [GET]
++ Response 403 (application/json)
 
 
-**Endpoint**: <code>**GET** /user/{userId}/course/{courseId}/courseLink</code>
-
-**Response Type**: `String`
-
-<br />
-<br />
-<br />
-<br />
-
-Generates a direct link to a course for a user. If the user has not activated their account, they will be prompted to set up a password when using the link. If the course requires enrolment for users to access, they will be enrolled when this endpoint is called.
-
-**Use Cases**:
-+ SSO or SSU user to access course content within native app or email
-
-
-**Considerations**:
-+ Not a seamless link generator. Requires sign in.
-
-
-**Related Endpoints**:
-none
-
-**Auth**:
-+ x-api-key: `YOUR_API_KEY` (Required)
-
-
-+ Parameters
-    + userId: `1424` (number, required) - The ID of the user to generate a link for.
-    + courseId: `532` (number, required) - The ID of the course to generate a link for.
-
-
-+ Request (application/json)
-    + Headers
-
-            x-api-key: YOUR_API_KEY
-
-
-+ Response 200 (text/html)
-
-
-        https://learn.edume.com/course/523?email=alex.cortez@gmail.com
+        {
+            "errorCode": "group_is_parent_group",
+            "statusCode": 403,
+            "error": "Forbidden",
+            "message": "Cannot perform operation on parent group"
+        }
 
 
 # Group  Deprecated
-##  Progress Stats v1 [/v2/public/stats/course/{courseKey}{?dayRange}{?isoDate}{?includeTime}{?startDateTimeInMs}{?endDateTimeInMs}{?groupId}{?showLatestCompletion}]
+##  Progress Stats V1 [/v2/public/stats/course/{courseKey}{?dayRange}{?isoDate}{?includeTime}{?startDateTimeInMs}{?endDateTimeInMs}{?groupId}{?showLatestCompletion}]
 
 ###  Progress CSV for Course (deprecated) [GET]
 
 **Note**:
-        <a name="progress-stats-deprecated"></a>
-This endpoint is **no longer in use**, beginning 06/10/2022.
-> Please refer to `Progress Stats` which is now the **primary** endpoint.\
-> [Click here](#progress-stats) for details.
+        This endpoint is **no longer in use**.
+> Please refer to `Progress Stats V3` which is now the **primary** Progress Stats endpoint.\
+> [Learn more](#reference/stats/progress-stats-v3/progress-csv-for-course).
 
 
 **Endpoint**: <code>**GET** /v2/public/stats/course/{courseKey}{?dayRange}{?isoDate}{?includeTime}{?startDateTimeInMs}{?endDateTimeInMs}{?groupId}{?showLatestCompletion}</code>
@@ -1279,20 +3188,20 @@ Note that the Course Key is a mandatory requirement for this endpoint.
 The CSV will have the following columns, for each user in the group or team:
 | Column Heading                    | Description                                                                          | Notes |
 |-----------------------------------|--------------------------------------------------------------------------------------|-------|
-| **First Name**                    | First name of the user.                                                              |       |
-| **Last Name**                     | Last name of the user.                                                               |       |
-| **Email**                         | Email address of the user.                                                           |       |
-| **Phone**                         | Phone number of the user.                                                            |       |
-| **User info**                     | An id or reference number associated with the user.                                  |       |
-| **Identifiers**                   | A list of external ids constructed from colon-separated key-value pairs.             | Included if `showIdentifiers=true` |
-| **User Activation Date**          | The date the user activated their account.                                           |       |
-| **Teams**                         | A comma-separated list of teams the user is assigned to.                             |       |
-| **Course Status**                 | The user's status on the course. One of _Not started_, _In progress_ or _Completed_. |       |
-| **Course Start Date**             | The date the user started the course.                                                |       |
-| **Course Completion Date**        | The date the user completed all lessons in the course.                               |       |
-| **Latest Course Completion Date** | The most recent date the user completed the course.                                  | Included if `showLatestCompletion=true`     |
-| **Lesson ... Score**              | The user's score in each lesson.    |  Each lesson will be contained in its own column.      |
-| **Overall Score**                 | The user's overall score for the course, calculated as the average of every lesson.  | This is only present if the user has completed the whole course. |
+| **First Name**                    | First name of the user                                                               |       |
+| **Last Name**                     | Last name of the user                                                                |       |
+| **Email**                         | Email address of the user                                                            |       |
+| **Phone**                         | Phone number of the user                                                             |       |
+| **User info**                     | An id or reference number associated with the user                                   |       |
+| **Identifiers**                   | A list of external ids constructed from colon-separated key-value pairs              | Included if `showIdentifiers=true` |
+| **User Activation Date**          | The date the user activated their account                                            |       |
+| **Teams**                         | A comma-separated list of teams the user is assigned to                              |       |
+| **Course Status**                 | The user's status on the course. One of _Not started_, _In progress_ or _Completed_  |       |
+| **Course Start Date**             | The date the user started the course                                                 |       |
+| **Course Completion Date**        | The date the user completed all lessons in the course                                |       |
+| **Latest Course Completion Date** | The most recent date the user completed the course                                   | Included if `showLatestCompletion=true`     |
+| **Lesson ... Score**              | The user's score in each lesson     |  Each lesson will be contained in its own column       |
+| **Overall Score**                 | The user's overall score for the course, calculated as the average of every lesson   | This is only present if the user has completed the whole course. |
 
 
 **Use Cases**:
@@ -1302,7 +3211,7 @@ The CSV will have the following columns, for each user in the group or team:
 
 **Considerations**:
 + Course-key can be gained from list course details
-+ When using specific start and end dates you will need to convert to unix timestamp in milliseconds
++ When using specific start and end dates you will need to convert to Unix timestamp in milliseconds
 + ISO 8601 takes the format of YYYY-MM-ddTHH:mm:ss+0000
 + Max date range is limited to 60 consecutive days
 + Don't provide start and end date or day ranges to receive 'Not Started' status
@@ -1319,7 +3228,7 @@ The CSV will have the following columns, for each user in the group or team:
 + Parameters
     + courseKey: `cool_company_and_edume_418_2988` (string, required) - The key of the course to get statistics for.
     + dayRange: `30` (number, optional) - The number of days to get statistics for, starting backwards from the current date. If not provided, statistics for all time will be returned. Minimum: 1. Maximum: 60
-    + isoDate: `true` (boolean, optional) - Use iso 8601 for formatting the date, defaults to false.
+    + isoDate: `true` (boolean, optional) - Use ISO 8601 for formatting the date, defaults to false.
     + includeTime: `true` (boolean, optional) - Include time in the date fields, defaults to false.
     + startDateTimeInMs: `1590707415000` (number, optional) - Unix timestamp in milliseconds (eg 1590707415000 = Thursday, 28 May 2020 23:10:15 GMT). Filters by last lesson completion >= `startDateTimeInMs`. It should not be used together with `dayRange`.
     + endDateTimeInMs: `1590708615000` (number, optional) - Unix timestamp in milliseconds (eg 1590708615000 = Thursday, 28 May 2020 23:30:15 GMT). Filters by last lesson completion <= `endDateTimeInMs`. If not provided, no upper bound filter will be applied. It should not be used together with `dayRange`. Requires `startDateTimeInMs`.
@@ -1340,3 +3249,22 @@ The CSV will have the following columns, for each user in the group or team:
         First name,Last name,Email,Phone,User info,User activation date (UTC),Teams,Course status,Course start date (UTC),Course completion date (UTC),Lesson 1 score,Lesson 2 score,Overall score
         Alexander,Cortez,alex.cortez@gmail.com,,,14/06/2018,"Aidan",Not started,,,,,
         Maria,Rodriguez,maria.rodriguez@yahoo.com,,,14/06/2018,"Aidan",Not started,,,,,
+
++ Response 400 (application/json)
+
+
+        {
+            "errorCode": "missing_group_id",
+            "statusCode": 400,
+            "error": "Bad Request",
+            "message": "groupId required when using customer-level API keys"
+        }
++ Response 400 (application/json)
+
+
+        {
+            "errorCode": "course_not_assigned_to_group",
+            "statusCode": 400,
+            "error": "Bad Request",
+            "message": "This course is not assigned to this group"
+        }
